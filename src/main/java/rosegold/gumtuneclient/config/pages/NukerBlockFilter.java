@@ -105,4 +105,10 @@ public class NukerBlockFilter {
             description = "Frozen Treasure"
     )
     public static boolean nukerBlockFilterFrozenTreasure = false;
+
+    @Switch(
+            name = "Endstone",
+            description = "Endstone"
+    )
+    public static boolean nukerBlockFilterEndstone = false;
 }

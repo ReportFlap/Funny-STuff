@@ -325,7 +325,8 @@ public class Nuker {
         if (NukerBlockFilter.nukerBlockFilterStone &&
                 (block == Blocks.stone ||
                 block == Blocks.cobblestone)) return true;
-
+        if(NukerBlockFilter.nukerBlockFilterEndstone &&
+                (block == Blocks.end_stone)) return true; //added endstone
         if (NukerBlockFilter.nukerBlockFilterOres &&
                 (block == Blocks.coal_ore ||
                 block == Blocks.lapis_ore ||
