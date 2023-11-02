@@ -4,22 +4,16 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.Vec3;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import rosegold.gumtuneclient.GumTuneClient;
 import rosegold.gumtuneclient.events.PlayerMoveEvent;
 
-import java.awt.*;
-
 import static rosegold.gumtuneclient.GumTuneClient.mc;
-import static rosegold.gumtuneclient.utils.RaytracingUtils.getVectorForRotation;
 
 public class RotationUtils {
 
     public static Rotation startRot;
-    public static Rotation neededChange;
     public static Rotation endRot;
     private static long startTime;
     private static long endTime;
@@ -109,6 +103,10 @@ public class RotationUtils {
         return getRotation(new Vec3(entity.posX, entity.posY + entity.getEyeHeight(), entity.posZ));
     }
 
+    public static Rotation getRotation(Entity entity, Vec3 offset) {
+        return getRotation(new Vec3(entity.posX + offset.xCoord, entity.posY + offset.yCoord, entity.posZ + offset.zCoord));
+    }
+
     public static Rotation getNeededChange(Rotation startRot, Rotation endRot) {
         float yawDiff = wrapAngleTo180(endRot.yaw) - wrapAngleTo180(startRot.yaw);
 
@@ -138,6 +136,10 @@ public class RotationUtils {
         return getNeededChange(new Rotation(mc.thePlayer.rotationPitch, mc.thePlayer.rotationYaw), endRot);
     }
 
+    public static Rotation getServerNeededChange(Rotation endRotation) {
+        return endRot == null ? getNeededChange(endRotation) : getNeededChange(endRot, endRotation);
+    }
+
     private static float interpolate(float start, float end) {
         return (end - start) * easeOutCubic((float) (System.currentTimeMillis() - startTime) / (endTime - startTime)) + start;
     }
@@ -146,12 +148,24 @@ public class RotationUtils {
         return (float) Math.max(0, Math.min(1, 1 - Math.pow(1 - number, 3)));
     }
 
+    public static void smoothLookRelative(Rotation rotation, long time) {
+        rotationType = RotationType.NORMAL;
+        done = false;
+
+        startRot = new Rotation(mc.thePlayer.rotationPitch, mc.thePlayer.rotationYaw);
+
+        endRot = new Rotation(startRot.pitch + rotation.pitch, startRot.yaw + rotation.yaw);
+
+        startTime = System.currentTimeMillis();
+        endTime = System.currentTimeMillis() + time;
+    }
+
     public static void smoothLook(Rotation rotation, long time) {
         rotationType = RotationType.NORMAL;
         done = false;
         startRot = new Rotation(mc.thePlayer.rotationPitch, mc.thePlayer.rotationYaw);
 
-        neededChange = getNeededChange(startRot, rotation);
+        Rotation neededChange = getNeededChange(startRot, rotation);
 
         endRot = new Rotation(startRot.pitch + neededChange.pitch, startRot.yaw + neededChange.yaw);
 
@@ -167,6 +181,21 @@ public class RotationUtils {
         smoothLook(rotation, (int) (rotationDifference / 180 * msPer180));
     }
 
+    public static void serverSmoothLookRelative(Rotation rotation, long time) {
+        rotationType = RotationType.SERVER;
+        done = false;
+
+        if (currentFakePitch == 0) currentFakePitch = mc.thePlayer.rotationPitch;
+        if (currentFakeYaw == 0) currentFakeYaw = mc.thePlayer.rotationYaw;
+
+        startRot = new Rotation(currentFakePitch, currentFakeYaw);
+
+        endRot = new Rotation(startRot.pitch + rotation.pitch, startRot.yaw + rotation.yaw);
+
+        startTime = System.currentTimeMillis();
+        endTime = System.currentTimeMillis() + time;
+    }
+
     public static void serverSmoothLook(Rotation rotation, long time) {
         rotationType = RotationType.SERVER;
         done = false;
@@ -176,12 +205,50 @@ public class RotationUtils {
 
         startRot = new Rotation(currentFakePitch, currentFakeYaw);
 
-        neededChange = getNeededChange(startRot, rotation);
+        Rotation neededChange = getNeededChange(startRot, rotation);
 
         endRot = new Rotation(startRot.pitch + neededChange.pitch, startRot.yaw + neededChange.yaw);
 
         startTime = System.currentTimeMillis();
         endTime = System.currentTimeMillis() + time;
+    }
+
+    public static void updateServerLookResetting() {
+        if (System.currentTimeMillis() <= endTime) {
+            mc.thePlayer.rotationYaw = interpolate(startRot.getYaw(), endRot.getYaw());
+            mc.thePlayer.rotationPitch = interpolate(startRot.getPitch(), endRot.getPitch());
+
+            currentFakeYaw = mc.thePlayer.rotationYaw;
+            currentFakePitch = mc.thePlayer.rotationPitch;
+        } else {
+            if (!done) {
+                mc.thePlayer.rotationYaw = endRot.getYaw();
+                mc.thePlayer.rotationPitch = endRot.getPitch();
+
+                currentFakeYaw = mc.thePlayer.rotationYaw;
+                currentFakePitch = mc.thePlayer.rotationPitch;
+
+                reset();
+            }
+        }
+    }
+
+    public static void updateServerLook() {
+        if (System.currentTimeMillis() <= endTime) {
+            mc.thePlayer.rotationYaw = interpolate(startRot.getYaw(), endRot.getYaw());
+            mc.thePlayer.rotationPitch = interpolate(startRot.getPitch(), endRot.getPitch());
+
+            currentFakeYaw = mc.thePlayer.rotationYaw;
+            currentFakePitch = mc.thePlayer.rotationPitch;
+        } else {
+            if (!done) {
+                mc.thePlayer.rotationYaw = endRot.getYaw();
+                mc.thePlayer.rotationPitch = endRot.getPitch();
+
+                currentFakeYaw = mc.thePlayer.rotationYaw;
+                currentFakePitch = mc.thePlayer.rotationPitch;
+            }
+        }
     }
 
     public static void look(Rotation rotation) {
@@ -192,7 +259,6 @@ public class RotationUtils {
     public static void reset() {
         done = true;
         startRot = null;
-        neededChange = null;
         endRot = null;
         startTime = 0;
         endTime = 0;
@@ -220,27 +286,6 @@ public class RotationUtils {
     public void onUpdatePre(PlayerMoveEvent.Pre pre) {
         serverPitch = mc.thePlayer.rotationPitch;
         serverYaw = mc.thePlayer.rotationYaw;
-
-        if (rotationType != RotationType.SERVER) return;
-        if (System.currentTimeMillis() <= endTime) {
-            mc.thePlayer.rotationYaw = interpolate(startRot.yaw, endRot.yaw);
-            mc.thePlayer.rotationPitch = interpolate(startRot.pitch, endRot.pitch);
-
-            currentFakeYaw = mc.thePlayer.rotationYaw;
-            currentFakePitch = mc.thePlayer.rotationPitch;
-        } else {
-            if (!done) {
-                mc.thePlayer.rotationYaw = endRot.yaw;
-                mc.thePlayer.rotationPitch = endRot.pitch;
-
-                currentFakeYaw = mc.thePlayer.rotationYaw;
-                currentFakePitch = mc.thePlayer.rotationPitch;
-
-                if (System.currentTimeMillis() >= endTime + 250) {
-                    reset();
-                }
-            }
-        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

@@ -5,8 +5,11 @@
   "refmap": "mixins.gumtuneclient.refmap.json",
   "verbose": true,
   "client": [
+    "MixinBlockRendererDispatcher",
     "MixinEntityPlayerSP",
     "MixinEntityRenderer",
+    "MixinGuiContainer",
+    "MixinGuiEditSign",
     "MixinMinecraft",
     "MixinModelBiped",
     "MixinPlayerControllerMP",
@@ -18,6 +21,7 @@
     "MixinChunk",
     "MixinModList",
     "MixinNetworkManager",
-    "accessors.RenderManagerAccessor"
+    "accessors.RenderManagerAccessor",
+    "blocks.MixinBlockMushroom"
   ]
 }

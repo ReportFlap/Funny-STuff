@@ -1,46 +1,18 @@
-package rosegold.gumtuneclient.modules.player;
+package rosegold.gumtuneclient.modules.farming;
 
-import net.minecraft.block.BlockSand;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.util.BlockPos;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import rosegold.gumtuneclient.GumTuneClient;
-import rosegold.gumtuneclient.utils.ModUtils;
 
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class AvoidBreakingCrops {
 
-    static final class Entry<K, V> implements Map.Entry<K, V> {
-        private final K key;
-        private V value;
-
-        public Entry(K key, V value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        @Override
-        public K getKey() {
-            return key;
-        }
-
-        @Override
-        public V getValue() {
-            return value;
-        }
-
-        @Override
-        public V setValue(V value) {
-            V old = this.value;
-            this.value = value;
-            return old;
-        }
-    }
-
-    private static final ConcurrentHashMap<Entry<BlockPos, IBlockState>, Integer> queue = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<AbstractMap.SimpleEntry<BlockPos, IBlockState>, Integer> queue = new ConcurrentHashMap<>();
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent event) {
@@ -55,6 +27,6 @@ public class AvoidBreakingCrops {
     }
 
     public static void addBlock(BlockPos blockPos, IBlockState blockState) {
-        queue.put(new Entry<>(blockPos, blockState), GumTuneClient.mc.thePlayer.ticksExisted);
+        queue.put(new AbstractMap.SimpleEntry<>(blockPos, blockState), GumTuneClient.mc.thePlayer.ticksExisted);
     }
 }
